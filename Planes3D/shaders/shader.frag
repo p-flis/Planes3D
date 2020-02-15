@@ -3,6 +3,7 @@
 out vec4 outputColor;
 
 in vec2 texCoord;
+in vec3 OutColor;
 
 uniform sampler2D texture0;
 

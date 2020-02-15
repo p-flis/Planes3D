@@ -15,9 +15,12 @@ namespace Planes3D
         public List<Mesh> meshes = new List<Mesh>();
     }
 
+
+
     public class Mesh
     {
         public List<int> vboIdList = new List<int>(1000);
+        private Material _material;
         int vertexCount;
         int vaoId;
         float boundingRadius;
@@ -42,10 +45,17 @@ namespace Planes3D
             End();
         }
 
-        public Mesh(List<float> positions, List<float> textCoords, List<float> normals, List<int> indices)
+        public Material Material
         {
-            //vboIdList = new List<int>();
-         
+            get { return _material; }
+            set { _material = value; }
+        }
+
+
+        public Mesh(List<float> positions, List<float> textCoords, List<float> normals, List<int> indices, Material material)
+        {
+
+            _material = material;
             vertexCount = indices.Count;
 
             vaoId = GL.GenVertexArray();
@@ -145,7 +155,20 @@ namespace Planes3D
             }
         }
 
-        public static Mesh processMesh(Assimp.Mesh mesh)
+        public static Vector3 V2V(Color4D c)
+        {
+            return Vector3.UnitX * c.R + Vector3.UnitY * c.G + Vector3.UnitZ * c.B;
+        }
+
+        public static Material processMaterial(Assimp.Scene scene, Assimp.Mesh mesh)
+        {
+            var tm = scene.Materials[mesh.MaterialIndex];
+            System.Console.WriteLine(tm.Reflectivity + " " + tm.ColorEmissive);
+            var m = new Material(V2V(tm.ColorAmbient), V2V(tm.ColorDiffuse), V2V(tm.ColorSpecular), tm.Shininess);
+            return m;
+        }
+
+        public static Mesh processMesh(Assimp.Scene scene, Assimp.Mesh mesh)
         {
             List<float> positions = new List<float>();
             List<float> textures = new List<float>();
@@ -154,13 +177,15 @@ namespace Planes3D
             //List<float> bitangens = new List<float>();
             List<int> indices = new List<int>();
 
+            var material = processMaterial(scene, mesh);
+            System.Console.WriteLine(material.ToString());
             processIndices(mesh, indices);
             processNormals(mesh, normals);
             processVertices(mesh, positions);
             processTextCoord(mesh, textures);
 
 
-            return new Mesh(positions, textures, normals, indices);
+            return new Mesh(positions, textures, normals, indices, material);
         }
     }
 
@@ -182,9 +207,12 @@ namespace Planes3D
             if(scene == null)
                 return null;
 
-            var m = Mesh.processMesh(scene.Meshes[0]);
             var rm = new Model();
-            rm.meshes.Add(m);
+            for(int i = 0; i < scene.Meshes.Count; i++)
+            {
+                var m = Mesh.processMesh(scene, scene.Meshes[i]);
+                rm.meshes.Add(m);
+            }
             return rm;
         }
     }

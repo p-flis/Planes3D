@@ -37,7 +37,6 @@ namespace Planes3D
                     PixelType.UnsignedByte,
                     data.Scan0);
             }
-            
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
