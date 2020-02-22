@@ -15,8 +15,7 @@ using PrimitiveType = OpenTK.Graphics.OpenGL4.PrimitiveType;
 using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 using TextureWrapMode = OpenTK.Graphics.OpenGL4.TextureWrapMode;
 using System.Windows.Forms;
-
-//using Assimp;
+using Planes3D.Move;
 
 namespace Planes3D
 {
@@ -35,52 +34,9 @@ namespace Planes3D
 
         private readonly Vector3 _lightPos = new Vector3(4f, 18f, -22f);
         private Vector3 _lightColor = new Vector3(1f, 1f, 1f);
+        IMoveModule moveModule = new EightMove(); 
 
         public MainWindow(int width, int height, string title) : base(width, height, GraphicsMode.Default, title) { }
-
-
-         public Vector2 Bezier(float t, Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
-        {
-            return 
-                (float)Math.Pow(1 - t, 3) * p1 + 
-                3 * (float)Math.Pow(1 - t, 2) * (float)Math.Pow(t, 1) * p2 +
-                3 * (float)Math.Pow(1 - t, 1) * (float)Math.Pow(t, 2) * p3 +
-                (float)Math.Pow(t, 3) * p4;
-        }
-
-        public float BezierAngle(float t, Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
-        {
-            var r1 = Bezier(t, p1, p2, p3, p4);
-            var r2 = Bezier(t+0.0001f, p1, p2, p3, p4);
-            return (float)Math.Atan2(r2.Y - r1.Y, r2.X - r1.X);
-        }
-
-        public float BezierCentriperal(float t, Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
-        {
-            var d = 0.01f;
-            var r1 = Bezier(t-d, p1, p2, p3, p4);
-            var r2 = Bezier(t, p1, p2, p3, p4);
-            var r3 = Bezier(t + d, p1, p2, p3, p4);
-            var x = r2 - r1;
-            var y = r3 - r2;
-            double sin = x.X * y.Y - y.X * x.Y;
-            double cos = x.X * y.X + x.Y * y.Y;
-
-            float angle = -(float)Math.Atan2(sin, cos);
-            if (angle < -Math.PI / 2)
-            {
-                angle = -(float)(Math.PI - angle);
-                angle *= -1;
-            }
-            if (angle > Math.PI / 2)
-            {
-                angle = (float)(Math.PI - angle);
-                angle *= -1;
-            }
-
-            return angle;
-        }
-
 
         List<string> facesNight = new List<string>()
         {
@@ -217,27 +173,7 @@ namespace Planes3D
                     case plane:
                         _lightingShader.Use();
 
-                        Vector2 r = Bezier(_time%10 / 10, 
-                            new Vector2(5f, -22f), 
-                            new Vector2(-22.3f, -42f), 
-                            new Vector2(20f, -60f), 
-                            new Vector2(5f, -22f));
-
-                        float an = BezierAngle(_time % 10 / 10, 
-                            new Vector2(5f, -22f),
-                            new Vector2(-22.3f, -42f),
-                            new Vector2(20f, -60f),
-                            new Vector2(5f, -22f));
-
-                        float cen = BezierCentriperal(_time % 10 / 10,
-                            new Vector2(5f, -22f),
-                            new Vector2(-22.3f, -42f),
-                            new Vector2(20f, -60f),
-                            new Vector2(5f, -22f));
-
-
-                        mm = mm * Matrix4.CreateRotationX(-cen*6) *Matrix4.CreateRotationY(-an)*
-                            Matrix4.CreateTranslation(r.X, 0, r.Y);
+                        mm = mm * moveModule.Move(_time % 20 / 10);
 
                         _lightingShader.SetMatrix4("model", mm);
                         _lightingShader.SetMatrix4("view", _camera.GetViewMatrix());
