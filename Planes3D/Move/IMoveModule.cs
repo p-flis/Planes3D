@@ -9,6 +9,6 @@ namespace Planes3D.Move
 {
     interface IMoveModule
     {
-        Matrix4 Move(float time);
+        (Matrix4 matrix, float angle) Move(float time);
     }
 }

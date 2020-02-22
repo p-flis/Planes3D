@@ -14,7 +14,7 @@ namespace Planes3D.Move
         private readonly Vector2 p3 = new Vector2(25f, -60f);
         private readonly Vector2 p4 = new Vector2(2.5f, -22f);
 
-        public Matrix4 Move(float time)
+        public (Matrix4 matrix, float angle) Move(float time)
         {
             var tp1 = p1;
             var tp2 = p2;
@@ -35,7 +35,7 @@ namespace Planes3D.Move
             float an = Bezier.Angle(time, tp1, tp2, tp3, tp4);
             float cen = Bezier.Centriperal(time, tp1, tp2, tp3, tp4);
 
-            return Matrix4.CreateRotationX(cen*cen*25*coef) * Matrix4.CreateRotationY(-an) * Matrix4.CreateTranslation(r.X, 0, r.Y);
+            return (Matrix4.CreateRotationX(cen * cen * 25 * coef) * Matrix4.CreateRotationY(-an) * Matrix4.CreateTranslation(r.X, 0, r.Y), an);
         }
     }
 }

@@ -16,6 +16,7 @@ using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 using TextureWrapMode = OpenTK.Graphics.OpenGL4.TextureWrapMode;
 using System.Windows.Forms;
 using Planes3D.Move;
+using Planes3D.Cameras;
 
 namespace Planes3D
 {
@@ -28,6 +29,7 @@ namespace Planes3D
         private Dictionary<string, Model> models = new Dictionary<string, Model>();
 
         Camera _camera;
+        ICamera Camera = new TrackingCamera();
 
         private bool _firstMove = true;
         private Vector2 _lastPos;
@@ -113,7 +115,7 @@ namespace Planes3D
 
         private void _timer_Tick(object sender, EventArgs e)
         {
-            Console.WriteLine($"{_camera.Position.X} {_camera.Position.Y} {_camera.Position.Z}");
+            Console.WriteLine($"{_camera.Position.X} {_camera.Position.Y} {_camera.Position.Z} {_camera.Yaw} {_camera.Pitch}");
         }
 
         Timer _timer = new Timer();
@@ -125,7 +127,10 @@ namespace Planes3D
 
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            skybox.Draw(_camera.GetViewMatrix(), _camera.GetProjectionMatrix(), _time*1000);
+            var shit = moveModule.Move(_time % 20 / 10);
+            var fajny = (models[plane].matrix * shit.matrix);
+
+            skybox.Draw(Camera.GetViewMatrix(fajny, shit.angle), Camera.GetProjectionMatrix(fajny, shit.angle), _time*1000);
 
             foreach (var model in models)
             {
@@ -139,8 +144,8 @@ namespace Planes3D
                         _lampShader.Use();
 
                         _lampShader.SetMatrix4("model", mm * Matrix4.CreateTranslation(_lightPos));
-                        _lampShader.SetMatrix4("view", _camera.GetViewMatrix());
-                        _lampShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                        _lampShader.SetMatrix4("view", Camera.GetViewMatrix(fajny, shit.angle));
+                        _lampShader.SetMatrix4("projection", Camera.GetProjectionMatrix(fajny, shit.angle));
                         foreach (var mesh in m.meshes)
                         {
                             mesh.Render();
@@ -153,8 +158,8 @@ namespace Planes3D
                         // mm = mm * Matrix4.CreateTranslation(1f, -0.5f, 1f);
 
                         _lightingShader.SetMatrix4("model", mm);
-                        _lightingShader.SetMatrix4("view", _camera.GetViewMatrix());
-                        _lightingShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                        _lightingShader.SetMatrix4("view", Camera.GetViewMatrix(fajny, shit.angle));
+                        _lightingShader.SetMatrix4("projection", Camera.GetProjectionMatrix(fajny, shit.angle));
 
                         _lightingShader.SetVector3("light.position", _lightPos);
                         _lightingShader.SetVector3("light.ambient", _lightColor * new Vector3(1f));
@@ -173,11 +178,11 @@ namespace Planes3D
                     case plane:
                         _lightingShader.Use();
 
-                        mm = mm * moveModule.Move(_time % 20 / 10);
+                        mm = mm * moveModule.Move(_time % 20 / 10).matrix;
 
                         _lightingShader.SetMatrix4("model", mm);
-                        _lightingShader.SetMatrix4("view", _camera.GetViewMatrix());
-                        _lightingShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                        _lightingShader.SetMatrix4("view", Camera.GetViewMatrix(fajny, shit.angle));
+                        _lightingShader.SetMatrix4("projection", Camera.GetProjectionMatrix(fajny, shit.angle));
 
                         _lightingShader.SetVector3("light.position", _lightPos);
                         _lightingShader.SetVector3("light.ambient", _lightColor * new Vector3(1f));
@@ -212,15 +217,9 @@ namespace Planes3D
             {
                 return;
             }
-
-
             var input = Keyboard.GetState();
-
             models["teapot"].matrix = models["teapot"].matrix* Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(1f)) * Matrix4.CreateRotationZ((float)MathHelper.DegreesToRadians(0.23f)); ;
-
             models["sun"].matrix = models["sun"].matrix * Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(-0.3f)) * Matrix4.CreateRotationZ((float)MathHelper.DegreesToRadians(0.1f)); ;
-
-            //models[plane].matrix *= Matrix4.CreateTranslation(0.001f, 0.001f, 0.001f);
 
             const float cameraSpeed = 15f;
             const float sensitivity = 0.2f;
@@ -268,7 +267,7 @@ namespace Planes3D
         {
             GL.Viewport(0, 0, Width, Height);
             _camera.AspectRatio = Width / (float)Height;
-
+            Camera.SetRatio(Width / (float)Height);
             base.OnResize(e);
         }
 
