@@ -1,6 +1,4 @@
 ﻿#version 330 core
-out vec4 FragColor;
-
 struct Material {
     vec3 ambient;
     vec3 diffuse;
@@ -33,18 +31,18 @@ struct SpotLight {
 };
 
 uniform SpotLight spotLight;
-
 uniform Light light;
 uniform Material material;
-
 uniform vec3 viewPos;
-
-in vec2 texCoord;
-
 uniform sampler2D texture0;
+uniform vec3 skyColour;
 
 in vec3 Normal;
 in vec3 FragPos;
+in float visibility;
+in vec2 texCoord;
+
+out vec4 FragColor;
 
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
@@ -68,14 +66,13 @@ void main()
     
     vec3 please = CalcSpotLight(spotLight, norm, FragPos, viewDir);
     
-    
     vec3 result = (ambient + diffuse + specular + please)*objectColor;
     FragColor = vec4(result, 1.0);
+    FragColor = mix(vec4(skyColour, 1.0), FragColor, visibility);
 }
 
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
-
     //diffuse shading
     vec3 lightDir = normalize(light.position - FragPos);
     float diff = max(dot(normal, lightDir), 0.0);

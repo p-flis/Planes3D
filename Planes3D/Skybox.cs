@@ -26,7 +26,7 @@ namespace Planes3D
             night = new SkyboxTexture(facesNight);
         }
 
-        public void Draw(Matrix4 view, Matrix4 projection, double time)
+        public void Draw(Matrix4 view, Matrix4 projection, double time, Vector3 fogColour, float upperLimit)
         {
             uint texture1 = night.handle;
             uint texture2 = day.handle;
@@ -60,6 +60,8 @@ namespace Planes3D
 
             GL.DepthMask(false);
             shader.Use();
+            shader.SetVector3("fogColour", fogColour);
+            shader.SetFloat("upperLimit", upperLimit);
             shader.SetInt("skybox", 0);
             shader.SetInt("skybox2", 1);
             shader.SetMatrix4("view", new Matrix4(new Matrix3(view*Matrix4.CreateRotationY((float)time/100000))));
