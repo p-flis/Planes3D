@@ -85,6 +85,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Camera.cs" />
+    <Compile Include="Cameras\CameraFactory.cs" />
+    <Compile Include="Cameras\CameraMode.cs" />
     <Compile Include="Cameras\ICamera.cs" />
     <Compile Include="Cameras\StationaryObservingCamera.cs" />
     <Compile Include="Cameras\StationaryTrackingCamera.cs" />

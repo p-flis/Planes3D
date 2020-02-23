@@ -29,7 +29,7 @@ namespace Planes3D
         private Dictionary<string, Model> models = new Dictionary<string, Model>();
 
         Camera _camera;
-        ICamera Camera = new TrackingCamera();
+        ICamera Camera = new StationaryTrackingCamera();
 
         private bool _firstMove = true;
         private Vector2 _lastPos;
@@ -72,10 +72,6 @@ namespace Planes3D
                 PostProcessSteps.Triangulate,
                 null);
 
-            models["teapot"] = (ModelLoader.LoadFromFile("../../models/teapot.obj",
-                PostProcessSteps.Triangulate,
-                null));
-
             models[plane] = (ModelLoader.LoadFromFile("../../models/VLJ19.blend",
                PostProcessSteps.Triangulate,
                null));
@@ -90,8 +86,6 @@ namespace Planes3D
             _lightingShader = new Shader("../../shaders/shader.vert", "../../shaders/lighting.frag");
             _lightingShader.Use();
 
-            models["teapot"].matrix = Matrix4.Identity * Matrix4.CreateScale(0.8f);
-            models["teapot"].texture = new Texture("../../textures/bricks.jpg");
             models["map"].texture = new Texture("../../textures/mpmap2.jpg");
             models["map"].matrix = Matrix4.Identity * Matrix4.CreateScale(0.1f) * Matrix4.CreateTranslation(5, -10, 3);
             models[plane].texture = new Texture("../../textures/a.jpg");
@@ -155,8 +149,6 @@ namespace Planes3D
                     case "map":
                         _lightingShader.Use();
 
-                        // mm = mm * Matrix4.CreateTranslation(1f, -0.5f, 1f);
-
                         _lightingShader.SetMatrix4("model", mm);
                         _lightingShader.SetMatrix4("view", Camera.GetViewMatrix(fajny, shit.angle));
                         _lightingShader.SetMatrix4("projection", Camera.GetProjectionMatrix(fajny, shit.angle));
@@ -218,12 +210,17 @@ namespace Planes3D
                 return;
             }
             var input = Keyboard.GetState();
-            models["teapot"].matrix = models["teapot"].matrix* Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(1f)) * Matrix4.CreateRotationZ((float)MathHelper.DegreesToRadians(0.23f)); ;
             models["sun"].matrix = models["sun"].matrix * Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(-0.3f)) * Matrix4.CreateRotationZ((float)MathHelper.DegreesToRadians(0.1f)); ;
 
             const float cameraSpeed = 15f;
             const float sensitivity = 0.2f;
-
+            float ratio = Width / (float)Height;
+            if (input.IsKeyDown(Key.Number1))
+                Camera = CameraFactory.Produce(CameraMode.StationaryObserving, ratio);
+            if (input.IsKeyDown(Key.Number2))
+                Camera = CameraFactory.Produce(CameraMode.StationaryTracking, ratio);
+            if (input.IsKeyDown(Key.Number3))
+                Camera = CameraFactory.Produce(CameraMode.Tracking, ratio);
             if (input.IsKeyDown(Key.W))
                 _camera.Position += _camera.Front * cameraSpeed * (float)e.Time; // Forward 
             if (input.IsKeyDown(Key.S))
