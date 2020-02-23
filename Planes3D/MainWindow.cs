@@ -28,7 +28,7 @@ namespace Planes3D
 
         private Dictionary<string, Model> models = new Dictionary<string, Model>();
 
-        Camera _camera;
+        private Camera _camera;
         ICamera Camera = new StationaryTrackingCamera();
 
         private bool _firstMove = true;
@@ -36,13 +36,15 @@ namespace Planes3D
 
         private readonly Vector3 _lightPos = new Vector3(4f, 18f, -22f);
         private Vector3 _lightColor = new Vector3(1f, 1f, 1f);
-        IMoveModule moveModule = new EightMove(); 
+        IMoveModule moveModule = new EightMove();
 
-        public MainWindow(int width, int height, string title) : base(width, height, GraphicsMode.Default, title) { }
+        public MainWindow(int width, int height, string title) : base(width, height, GraphicsMode.Default, title)
+        {
+        }
 
         List<string> facesNight = new List<string>()
         {
-           "../../textures/skybox/night/right.png",
+            "../../textures/skybox/night/right.png",
             "../../textures/skybox/night/left.png",
             "../../textures/skybox/night/top.png",
             "../../textures/skybox/night/bottom.png",
@@ -64,7 +66,6 @@ namespace Planes3D
 
         protected override void OnLoad(EventArgs e)
         {
-
             models["map"] = ModelLoader.LoadFromFile("../../models/mpmap2.x",
                 PostProcessSteps.Triangulate,
                 null);
@@ -73,11 +74,11 @@ namespace Planes3D
                 null);
 
             models[plane] = (ModelLoader.LoadFromFile("../../models/VLJ19.blend",
-               PostProcessSteps.Triangulate,
-               null));
+                PostProcessSteps.Triangulate,
+                null));
 
-            skybox = new Skybox("../../shaders/skybox/shader.vert", "../../shaders/skybox/shader.frag", 
-                "../../models/cube.obj", 
+            skybox = new Skybox("../../shaders/skybox/shader.vert", "../../shaders/skybox/shader.frag",
+                "../../models/cube.obj",
                 facesDay, facesNight);
 
             _lampShader = new Shader("../../shaders/shader.vert", "../../shaders/shader.frag");
@@ -89,15 +90,15 @@ namespace Planes3D
             models["map"].texture = new Texture("../../textures/mpmap2.jpg");
             models["map"].matrix = Matrix4.Identity * Matrix4.CreateScale(0.1f) * Matrix4.CreateTranslation(5, -10, 3);
             models[plane].texture = new Texture("../../textures/a.jpg");
-            models[plane].matrix = Matrix4.Identity*
-                Matrix4.CreateScale(0.2f)*
-                Matrix4.CreateRotationZ((float)Math.PI/2)* 
-                Matrix4.CreateRotationX(-(float)Math.PI / 2) * Matrix4.CreateTranslation(0, -1f, 0);
+            models[plane].matrix = Matrix4.Identity *
+                                   Matrix4.CreateScale(0.2f) *
+                                   Matrix4.CreateRotationZ((float) Math.PI / 2) *
+                                   Matrix4.CreateRotationX(-(float) Math.PI / 2) * Matrix4.CreateTranslation(0, -1f, 0);
 
             models["sun"].matrix = Matrix4.Identity * Matrix4.CreateScale(0.05f);
             models["sun"].texture = new Texture("../../textures/sun.jpg");
 
-            _camera = new Camera(Vector3.UnitZ * 5, Width / (float)Height);
+            _camera = new Camera(Vector3.UnitZ * 5, Width / (float) Height);
 
             GL.Enable(EnableCap.DepthTest);
 
@@ -109,7 +110,8 @@ namespace Planes3D
 
         private void _timer_Tick(object sender, EventArgs e)
         {
-            Console.WriteLine($"{_camera.Position.X} {_camera.Position.Y} {_camera.Position.Z} {_camera.Yaw} {_camera.Pitch}");
+            Console.WriteLine(
+                $"{_camera.Position.X} {_camera.Position.Y} {_camera.Position.Z} {_camera.Yaw} {_camera.Pitch}");
         }
 
         Timer _timer = new Timer();
@@ -117,14 +119,34 @@ namespace Planes3D
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            _time += (float)e.Time;
+            _time += (float) e.Time;
 
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             var shit = moveModule.Move(_time % 20 / 10);
             var fajny = (models[plane].matrix * shit.matrix);
 
-            skybox.Draw(Camera.GetViewMatrix(fajny, shit.angle), Camera.GetProjectionMatrix(fajny, shit.angle), _time*1000);
+            skybox.Draw(Camera.GetViewMatrix(fajny, shit.angle), Camera.GetProjectionMatrix(fajny, shit.angle),
+                _time * 1000);
+
+            var _front = new Vector3();
+            float pitch = 50;
+            _front.X = (float)Math.Cos(pitch) * (float)Math.Cos(shit.angle);
+            _front.Y = (float)Math.Sin(pitch);
+            _front.Z = (float)Math.Cos(pitch) * (float)Math.Sin(shit.angle);
+            
+            // Spot light
+            _lightingShader.Use();
+            _lightingShader.SetVector3("spotLight.position", fajny.ExtractTranslation());
+            _lightingShader.SetVector3("spotLight.direction", _front);
+            _lightingShader.SetVector3("spotLight.ambient", new Vector3(0.0f, 0.0f, 0.0f));
+            _lightingShader.SetVector3("spotLight.diffuse", new Vector3(1.0f, 1.0f, 1.0f));
+            _lightingShader.SetVector3("spotLight.specular", new Vector3(1.0f, 1.0f, 1.0f));
+            _lightingShader.SetFloat("spotLight.constant", 1.0f);
+            _lightingShader.SetFloat("spotLight.linear", 0.09f);
+            _lightingShader.SetFloat("spotLight.quadratic", 0.032f);
+            _lightingShader.SetFloat("spotLight.cutOff", (float) Math.Cos(MathHelper.DegreesToRadians(10.5f)));
+            _lightingShader.SetFloat("spotLight.outerCutOff", (float) Math.Cos(MathHelper.DegreesToRadians(12.5f)));
 
             foreach (var model in models)
             {
@@ -132,8 +154,8 @@ namespace Planes3D
                 m.texture.Use();
                 var mm = m.matrix;
 
-               switch(model.Key)
-               {
+                switch (model.Key)
+                {
                     case "sun":
                         _lampShader.Use();
 
@@ -144,6 +166,7 @@ namespace Planes3D
                         {
                             mesh.Render();
                         }
+
                         break;
 
                     case "map":
@@ -166,6 +189,7 @@ namespace Planes3D
                             _lightingShader.SetFloat("material.shininess", mesh.Material.getReflectance());
                             mesh.Render();
                         }
+
                         break;
                     case plane:
                         _lightingShader.Use();
@@ -189,14 +213,14 @@ namespace Planes3D
                             _lightingShader.SetFloat("material.shininess", mesh.Material.getReflectance());
                             mesh.Render();
                         }
+
                         break;
 
                     default:
                         break;
-
                 }
             }
-            
+
             SwapBuffers();
 
             base.OnRenderFrame(e);
@@ -209,12 +233,16 @@ namespace Planes3D
             {
                 return;
             }
+
             var input = Keyboard.GetState();
-            models["sun"].matrix = models["sun"].matrix * Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(-0.3f)) * Matrix4.CreateRotationZ((float)MathHelper.DegreesToRadians(0.1f)); ;
+            models["sun"].matrix = models["sun"].matrix *
+                                   Matrix4.CreateRotationY((float) MathHelper.DegreesToRadians(-0.3f)) *
+                                   Matrix4.CreateRotationZ((float) MathHelper.DegreesToRadians(0.1f));
+            ;
 
             const float cameraSpeed = 15f;
             const float sensitivity = 0.2f;
-            float ratio = Width / (float)Height;
+            float ratio = Width / (float) Height;
             if (input.IsKeyDown(Key.Number1))
                 Camera = CameraFactory.Produce(CameraMode.StationaryObserving, ratio);
             if (input.IsKeyDown(Key.Number2))
@@ -222,17 +250,17 @@ namespace Planes3D
             if (input.IsKeyDown(Key.Number3))
                 Camera = CameraFactory.Produce(CameraMode.Tracking, ratio);
             if (input.IsKeyDown(Key.W))
-                _camera.Position += _camera.Front * cameraSpeed * (float)e.Time; // Forward 
+                _camera.Position += _camera.Front * cameraSpeed * (float) e.Time; // Forward 
             if (input.IsKeyDown(Key.S))
-                _camera.Position -= _camera.Front * cameraSpeed * (float)e.Time; // Backwards
+                _camera.Position -= _camera.Front * cameraSpeed * (float) e.Time; // Backwards
             if (input.IsKeyDown(Key.A))
-                _camera.Position -= _camera.Right * cameraSpeed * (float)e.Time; // Left
+                _camera.Position -= _camera.Right * cameraSpeed * (float) e.Time; // Left
             if (input.IsKeyDown(Key.D))
-                _camera.Position += _camera.Right * cameraSpeed * (float)e.Time; // Right
+                _camera.Position += _camera.Right * cameraSpeed * (float) e.Time; // Right
             if (input.IsKeyDown(Key.Space))
-                _camera.Position += _camera.Up * cameraSpeed * (float)e.Time; // Up 
+                _camera.Position += _camera.Up * cameraSpeed * (float) e.Time; // Up 
             if (input.IsKeyDown(Key.LShift))
-                _camera.Position -= _camera.Up * cameraSpeed * (float)e.Time; // Down
+                _camera.Position -= _camera.Up * cameraSpeed * (float) e.Time; // Down
 
             var mouse = Mouse.GetState();
 
@@ -263,8 +291,8 @@ namespace Planes3D
         protected override void OnResize(EventArgs e)
         {
             GL.Viewport(0, 0, Width, Height);
-            _camera.AspectRatio = Width / (float)Height;
-            Camera.SetRatio(Width / (float)Height);
+            _camera.AspectRatio = Width / (float) Height;
+            Camera.SetRatio(Width / (float) Height);
             base.OnResize(e);
         }
 
