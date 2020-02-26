@@ -27,18 +27,16 @@ namespace Planes3D
         private Shader _lampShader;
 
         private Dictionary<string, Model> models = new Dictionary<string, Model>();
+        private Dictionary<string, Shader> shaders = new Dictionary<string, Shader>();
 
-        private Camera _camera;
         ICamera Camera = new StationaryTrackingCamera();
 
-        private bool _firstMove = true;
-        private Vector2 _lastPos;
         private Vector2 _spotLight = new Vector2(0f, 0f);
         private Vector2 _fog = new Vector2(0.007f, 1.5f);
         private Vector3 _fogColour = new Vector3(0.1f, 0.5f, 0.4f);
         private float _upperLimit = 0.6f;
         
-        private readonly Vector3 _lightPos = new Vector3(4f, 18f, -22f);
+        private Vector3 _lightPos = new Vector3(4f, 20f, -22f);
         private Vector3 _lightColor = new Vector3(1f, 1f, 1f);
         IMoveModule moveModule = new EightMove();
 
@@ -88,7 +86,11 @@ namespace Planes3D
             _lampShader = new Shader("../../shaders/shader.vert", "../../shaders/shader.frag");
             _lampShader.Use();
 
-            _lightingShader = new Shader("../../shaders/shader.vert", "../../shaders/lighting.frag");
+            shaders["blinn"] = new Shader("../../shaders/blinn/shader.vert", "../../shaders/blinn/lighting.frag");
+            shaders["gouraud"] = new Shader("../../shaders/gouraud/shader.vert", "../../shaders/gouraud/lighting.frag");
+            shaders["phong"] = new Shader("../../shaders/phong/shader.vert", "../../shaders/phong/lighting.frag");
+
+            _lightingShader = shaders["phong"];
             _lightingShader.Use();
 
             models["map"].texture = new Texture("../../textures/mpmap2.jpg");
@@ -102,20 +104,12 @@ namespace Planes3D
             models["sun"].matrix = Matrix4.Identity * Matrix4.CreateScale(0.05f);
             models["sun"].texture = new Texture("../../textures/sun.jpg");
 
-            _camera = new Camera(Vector3.UnitZ * 5, Width / (float) Height);
 
             GL.Enable(EnableCap.DepthTest);
 
             base.OnLoad(e);
             _timer.Interval = 1000;
-            _timer.Tick += _timer_Tick;
             _timer.Start();
-        }
-
-        private void _timer_Tick(object sender, EventArgs e)
-        {
-            Console.WriteLine(
-                $"{_camera.Position.X} {_camera.Position.Y} {_camera.Position.Z} {_camera.Yaw} {_camera.Pitch}");
         }
 
         Timer _timer = new Timer();
@@ -169,14 +163,14 @@ namespace Planes3D
 
                         _lightingShader.SetVector3("light.position", _lightPos);
                         _lightingShader.SetVector3("light.ambient", _lightColor * new Vector3(1f));
-                        _lightingShader.SetVector3("light.diffuse", _lightColor * new Vector3(1f));
+                        _lightingShader.SetVector3("light.diffuse", _lightColor * new Vector3(1.5f));
                         _lightingShader.SetVector3("light.specular", _lightColor * new Vector3(1f));
 
                         foreach (var mesh in m.meshes)
                         {
                             _lightingShader.SetVector3("material.ambient", new Vector3(0.1f));
                             _lightingShader.SetVector3("material.diffuse", mesh.Material.getDiffuseColour());
-                            _lightingShader.SetVector3("material.specular", mesh.Material.getSpecularColour());
+                            _lightingShader.SetVector3("material.specular", new Vector3(0.2f));
                             _lightingShader.SetFloat("material.shininess", mesh.Material.getReflectance());
                             mesh.Render();
                         }
@@ -231,9 +225,8 @@ namespace Planes3D
                                    Matrix4.CreateRotationY((float) MathHelper.DegreesToRadians(-0.3f)) *
                                    Matrix4.CreateRotationZ((float) MathHelper.DegreesToRadians(0.1f));
 
-            const float cameraSpeed = 15f;
-            const float sensitivity = 0.2f;
-            const float spotLightSpeed = 0.01f;
+            const float lightSpeed = 0.1f;
+            const float spotLightSpeed = 0.02f;
             const float fogDensitySpeed = 0.001f;
             const float fogGradientSpeed = 0.01f;
             const float upperLimitSpeed = 0.01f;
@@ -280,41 +273,20 @@ namespace Planes3D
                 _spotLight.Y -= spotLightSpeed;
             if (input.IsKeyDown(Key.Number1))
                 Camera = CameraFactory.Produce(CameraMode.StationaryObserving, ratio);
-            if (input.IsKeyDown(Key.Number1))
-                Camera = CameraFactory.Produce(CameraMode.StationaryObserving, ratio);
             if (input.IsKeyDown(Key.Number2))
                 Camera = CameraFactory.Produce(CameraMode.StationaryTracking, ratio);
             if (input.IsKeyDown(Key.Number3))
                 Camera = CameraFactory.Produce(CameraMode.Tracking, ratio);
+            if (input.IsKeyDown(Key.Number4))
+                _lightingShader = shaders["phong"];
+            if (input.IsKeyDown(Key.Number5))
+                _lightingShader = shaders["gouraud"];
+            if (input.IsKeyDown(Key.Number6))
+                _lightingShader = shaders["blinn"];
             if (input.IsKeyDown(Key.W))
-                _camera.Position += _camera.Front * cameraSpeed * (float) e.Time; // Forward 
+                _lightPos.Y += lightSpeed;
             if (input.IsKeyDown(Key.S))
-                _camera.Position -= _camera.Front * cameraSpeed * (float) e.Time; // Backwards
-            if (input.IsKeyDown(Key.A))
-                _camera.Position -= _camera.Right * cameraSpeed * (float) e.Time; // Left
-            if (input.IsKeyDown(Key.D))
-                _camera.Position += _camera.Right * cameraSpeed * (float) e.Time; // Right
-            if (input.IsKeyDown(Key.Space))
-                _camera.Position += _camera.Up * cameraSpeed * (float) e.Time; // Up 
-            if (input.IsKeyDown(Key.LShift))
-                _camera.Position -= _camera.Up * cameraSpeed * (float) e.Time; // Down
-
-            var mouse = Mouse.GetState();
-
-            if (_firstMove)
-            {
-                _lastPos = new Vector2(mouse.X, mouse.Y);
-                _firstMove = false;
-            }
-            else
-            {
-                var deltaX = mouse.X - _lastPos.X;
-                var deltaY = mouse.Y - _lastPos.Y;
-                _lastPos = new Vector2(mouse.X, mouse.Y);
-
-                _camera.Yaw += deltaX * sensitivity;
-                _camera.Pitch -= deltaY * sensitivity;
-            }
+                _lightPos.Y -= lightSpeed;
 
             if (input.IsKeyDown(Key.Escape))
             {
@@ -328,27 +300,10 @@ namespace Planes3D
         protected override void OnResize(EventArgs e)
         {
             GL.Viewport(0, 0, Width, Height);
-            _camera.AspectRatio = Width / (float) Height;
             Camera.SetRatio(Width / (float) Height);
             base.OnResize(e);
         }
-
-
-        protected override void OnUnload(EventArgs e)
-        {
-            // GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-            // GL.BindVertexArray(0);
-            // GL.UseProgram(0);
-            //
-            // GL.DeleteBuffer(_vertexBufferObject);
-            // GL.DeleteVertexArray(_vertexArrayObject);
-            //
-            // GL.DeleteProgram(_shader.Handle);
-            // // Don't forget to dispose of the texture too!
-            // GL.DeleteTexture(_texture.Handle);
-            // base.OnUnload(e);
-        }
-
+        
         private static void SetSpotLight(Shader shader, float pitch, float yaw, Vector3 translation)
         {
             var front = new Vector3
@@ -361,13 +316,13 @@ namespace Planes3D
             shader.SetVector3("spotLight.position", translation);
             shader.SetVector3("spotLight.direction", front);
             shader.SetVector3("spotLight.ambient", new Vector3(0.0f, 0.0f, 0.0f));
-            shader.SetVector3("spotLight.diffuse", new Vector3(1.0f, 1.0f, 1.0f));
+            shader.SetVector3("spotLight.diffuse", new Vector3(5.0f, 5.0f, 5.0f));
             shader.SetVector3("spotLight.specular", new Vector3(1.0f, 1.0f, 1.0f));
             shader.SetFloat("spotLight.constant", 1.0f);
             shader.SetFloat("spotLight.linear", 0.09f);
             shader.SetFloat("spotLight.quadratic", 0.032f);
-            shader.SetFloat("spotLight.cutOff", (float) Math.Cos(MathHelper.DegreesToRadians(10.5f)));
-            shader.SetFloat("spotLight.outerCutOff", (float) Math.Cos(MathHelper.DegreesToRadians(12.5f)));
+            shader.SetFloat("spotLight.cutOff", (float) Math.Cos(MathHelper.DegreesToRadians(20.5f)));
+            shader.SetFloat("spotLight.outerCutOff", (float) Math.Cos(MathHelper.DegreesToRadians(25.5f)));
         }
 
         private static void SetFog(Shader shader, Vector3 skyColour, float density, float gradient)
