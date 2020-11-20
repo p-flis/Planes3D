@@ -1,6 +1,6 @@
 # Planes3D
 
-User's manual:
+## User's manual:
 
 * **Up/Right/Down/Left** - moving the plane's spotlight
 * **1** - a stationary observing camera
@@ -16,3 +16,7 @@ User's manual:
 * **+** - increase the fog height
 * **-** - reduce the fog height
 * **W/S** - moving the light source
+
+## Gallery
+
+![PLANE01](https://raw.githubusercontent.com/p-flis/Planes3D/master/gallery/plane01.png)
